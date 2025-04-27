@@ -1,70 +1,87 @@
-# Getting Started with Create React App
+# Portfolio Tracker Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This is the frontend for the Portfolio Tracker application, a web-based tool designed to help you track and visualize your investment portfolio performance.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Portfolio Dashboard**: View an overview of your entire investment portfolio
+- **Asset Visualization**: Interactive charts and graphs showing asset allocation and performance
+- **Real-time Updates**: Connect to the backend API for up-to-date portfolio information
+- **Responsive Design**: Built with a mobile-first approach using React and Tailwind CSS
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- React 19
+- Tailwind CSS
+- Chart.js with react-chartjs-2 for data visualization
+- Docker for containerization
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Getting Started
 
-### `npm test`
+### Prerequisites
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Node.js (version 16 or higher)
+- npm or yarn
 
-### `npm run build`
+### Installation
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Clone the repository
+2. Navigate to the frontend directory:
+   ```bash
+   cd Portfolio_tracker/frontend
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Development
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+To start the development server:
 
-### `npm run eject`
+```bash
+npm start
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+This will run the app in development mode. Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Building for Production
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+To build the app for production:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```bash
+npm run build
+```
 
-## Learn More
+This creates an optimized production build in the `build` folder.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Docker Support
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+The frontend includes Docker support for easy deployment. To build and run the frontend container:
 
-### Code Splitting
+```bash
+# Build the Docker image
+docker build -t portfolio-tracker-frontend .
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+# Run the container
+docker run -p 80:80 portfolio-tracker-frontend
+```
 
-### Analyzing the Bundle Size
+The frontend will be available at [http://localhost](http://localhost).
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Integration with Backend
 
-### Making a Progressive Web App
+This frontend is designed to work with the Portfolio Tracker backend API. Make sure the backend server is running for full functionality.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Customization
 
-### Advanced Configuration
+- The UI is built with Tailwind CSS, which can be customized via the `tailwind.config.js` file
+- Chart appearance can be modified in the relevant components
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Contributing
 
-### Deployment
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## License
 
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+This project is licensed under the terms included in the repository's LICENSE file.

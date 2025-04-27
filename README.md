@@ -13,10 +13,20 @@ A web application for tracking and visualizing your asset portfolio over time.
 
 ## Tech Stack
 
-- **Frontend**: React, Chart.js, Axios
-- **Backend**: Node.js, Express
-- **Database**: SQLite3
-- **Deployment**: Docker (optional)
+- **Frontend**: 
+  - React 19
+  - Tailwind CSS for styling
+  - Chart.js with react-chartjs-2 for data visualization
+  - Axios for API requests
+
+- **Backend**: 
+  - Node.js
+  - Express.js for REST API
+  - SQLite3 for database storage
+
+- **Deployment & DevOps**: 
+  - Docker & Docker Compose for containerization
+  - Nginx as web server for production build
 
 ## Screenshots
 
