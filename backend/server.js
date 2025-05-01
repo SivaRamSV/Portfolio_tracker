@@ -177,7 +177,6 @@ app.get('/portfolio/months', (req, res) => {
       console.error('Error fetching months:', err.message);
       return res.status(500).json({ error: 'Failed to fetch available months.' });
     }
-    console.log('Available months:', rows);
     // Normalize month values to be within 0-11 range
     const normalizedRows = rows.map(row => {
       if (row.month < 0 || row.month > 12) {
@@ -190,7 +189,6 @@ app.get('/portfolio/months', (req, res) => {
       }
       return row;
     });
-    console.log('Available months:', normalizedRows);
     res.status(200).json(normalizedRows);
   });
 });
@@ -205,6 +203,41 @@ app.get('/portfolio/years', (req, res) => {
       return res.status(500).json({ error: 'Failed to fetch available years.' });
     }
     res.status(200).json(rows.map(row => row.year)); // Return just the year values in an array
+  });
+});
+
+// Get monthly performance data for a specific year
+app.get('/portfolio/performance/:year', (req, res) => {
+  const year = parseInt(req.params.year);
+  
+  if (isNaN(year)) {
+    return res.status(400).json({ error: 'Invalid year parameter' });
+  }
+  
+  const query = `
+    SELECT month, SUM(asset_value) as total_value 
+    FROM portfolio_v2 
+    WHERE year = ? 
+    GROUP BY month 
+    ORDER BY month
+  `;
+  
+  db.all(query, [year], (err, rows) => {
+    if (err) {
+      console.error('Error fetching performance data:', err.message);
+      return res.status(500).json({ error: 'Failed to fetch performance data.' });
+    }
+    
+    // Create an array with 12 months (0-11), with null values for months without data
+    const monthlyData = Array(13).fill(null);
+    // Fill in the data we have
+    rows.forEach(row => {
+      if (row.month >=1 && row.month <=12) {
+        monthlyData[row.month] = row.total_value;
+      }
+    });
+    monthlyData.shift()
+    res.status(200).json(monthlyData);
   });
 });
 

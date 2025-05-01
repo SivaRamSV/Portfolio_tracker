@@ -2,10 +2,19 @@ FROM node:16-alpine
 
 WORKDIR /app
 
+# Install build tools and dependencies required for sqlite3
+RUN apk add --no-cache python3 make g++ sqlite
+
+# Copy only package.json and package-lock.json first to leverage Docker caching
 COPY package*.json ./
 
-RUN npm install
+# Install dependencies, excluding sqlite3 initially
+RUN npm install --omit=optional
 
+# Rebuild sqlite3 specifically for the container's architecture
+RUN npm rebuild sqlite3 --build-from-source
+
+# Copy the rest of the application code
 COPY . .
 
 EXPOSE 5001
