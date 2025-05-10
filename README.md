@@ -29,8 +29,15 @@ A web application for tracking and visualizing your asset portfolio over time.
   - Nginx as web server for production build
 
 ## Screenshots
+### Dashboard
 
-(Add screenshots here)
+![Dashboard](./frontend/public/dark.png)
+
+![Asset Management](./frontend/public/light.png)
+
+## Disclaimer
+
+This application was developed with the assistance of GPT-4.0 and Claude 3.7. It is not production-ready and is intended for personal use only. The app is designed to be run locally on the user's computer. Please note that it may have vulnerabilities, as the author is not an expert in React and Node.js.
 
 ## Getting Started
 
