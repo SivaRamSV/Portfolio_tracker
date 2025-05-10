@@ -127,7 +127,7 @@ CREATE TABLE portfolio_v2 (
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is proprietary and all rights are reserved. You may not use, copy, modify, or distribute this software without explicit permission from the author.
 
 ## Contributing
 
