@@ -53,8 +53,10 @@ function App() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   // eslint-disable-next-line no-unused-vars
   const [availableMonths, setAvailableMonths] = useState([]);
-  const [availableYears, setAvailableYears] = useState([]);
   
+  // Prepopulate the year dropdown with a range of years from 1990 to 2100
+  const yearRange = Array.from({ length: 2100 - 1990 + 1 }, (_, i) => 1990 + i);
+
   // Add this function to fetch available months and years
   const fetchAvailableMonths = async () => {
     try {
@@ -80,22 +82,6 @@ function App() {
   // Add this effect to run once on component mount to initialize with latest data
   useEffect(() => {
     fetchAvailableMonths();
-  }, []);
-
-  // Fetch available years from the backend
-  useEffect(() => {
-    const fetchAvailableYears = async () => {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/portfolio/years`);
-        if (response.data && Array.isArray(response.data)) {
-          setAvailableYears(response.data);
-        }
-      } catch (error) {
-        log('Error fetching available years: ' + error, 'error');
-      }
-    };
-
-    fetchAvailableYears();
   }, []);
 
   // Function to load assets from backend - wrapped in useCallback to avoid dependency issues
@@ -205,7 +191,7 @@ function App() {
             values: updatedChartData.data,
           });
         }
-        
+
         // Clear form fields
         setAssetName('');
         setAssetValue('');
@@ -526,7 +512,7 @@ function App() {
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
               style={{ maxWidth: '100px' }}
             >
-              {availableYears.map((year) => (
+              {yearRange.map((year) => (
                 <option key={year} value={year}>{year}</option>
               ))}
             </select>
