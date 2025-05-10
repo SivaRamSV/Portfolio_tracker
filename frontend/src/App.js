@@ -6,6 +6,15 @@ import './App.css';
 
 const API_BASE_URL = 'http://localhost:5001';
 
+// Add a custom logger function
+const log = (message, level = 'info') => {
+  const logLevel = process.env.REACT_APP_LOG_LEVEL || 'info';
+  const levels = ['error', 'warn', 'info', 'debug'];
+  if (levels.indexOf(level) <= levels.indexOf(logLevel)) {
+    console[level](message);
+  }
+};
+
 function App() {
   // Dark Mode State
   const [darkMode, setDarkMode] = useState(false);
@@ -61,10 +70,10 @@ function App() {
         // Set the selectedMonth and selectedYear to the latest available data
         setSelectedMonth(latestData.month + 1); // Adding 1 because API months are 0-indexed
         setSelectedYear(latestData.year);
-        console.log(`Setting latest available data: Month ${latestData.month + 1}, Year ${latestData.year}`);
+        log(`Setting latest available data: Month ${latestData.month + 1}, Year ${latestData.year}`, 'debug');
       }
     } catch (error) {
-      console.error('Error fetching available months:', error);
+      log('Error fetching available months: ' + error, 'error');
     }
   };
 
@@ -82,7 +91,7 @@ function App() {
           setAvailableYears(response.data);
         }
       } catch (error) {
-        console.error('Error fetching available years:', error);
+        log('Error fetching available years: ' + error, 'error');
       }
     };
 
@@ -93,23 +102,23 @@ function App() {
   const loadAssetsFromBackend = useCallback(async () => {
     try {
       setLoading(true);
-      console.log(`Fetching data for month: ${selectedMonth}, year: ${selectedYear}`);
+      log(`Fetching data for month: ${selectedMonth}, year: ${selectedYear}`, 'debug');
       const response = await axios.get(
         `${API_BASE_URL}/portfolio?month=${selectedMonth}&year=${selectedYear}`
       );
       
       if (response.data && Array.isArray(response.data)) {
-        console.log('Data received:', response.data);
+        log('Data received: ' + JSON.stringify(response.data), 'debug');
         setAssets(response.data);
         // Set currentAssets to display the data
         setCurrentAssets(response.data);
       } else {
-        console.log('No data found for the selected month and year');
+        log('No data found for the selected month and year', 'warn');
         setAssets([]);
         setCurrentAssets([]);
       }
     } catch (error) {
-      console.error('Error loading assets from backend:', error);
+      log('Error loading assets from backend: ' + error, 'error');
       setAssets([]);
       setCurrentAssets([]);
     } finally {
@@ -124,7 +133,6 @@ function App() {
   }, [selectedMonth, selectedYear]);
 
   // Assets & Portfolio Data - use a ref for stable monthly assets
-  const [monthlyAssets, setMonthlyAssets] = useState({});
   const [currentAssets, setCurrentAssets] = useState([]);
   const [assetName, setAssetName] = useState('');
   const [assetValue, setAssetValue] = useState('');
@@ -167,49 +175,43 @@ function App() {
     [currentAssets]
   );
 
-  // Add a new asset for the current month
+  // Update the addAsset function to refresh the Assets section immediately
   const addAsset = async (e) => {
     e.preventDefault();
     if (!assetName || !assetValue) {
-      console.error('Validation failed: Asset name or value is missing');
+      log('Validation failed: Asset name or value is missing', 'warn');
       return;
     }
 
     try {
-      // Add month and year to the request
       const response = await axios.post(`${API_BASE_URL}/portfolio`, {
         asset_name: assetName,
         asset_value: parseFloat(assetValue),
-        month: selectedMonth - 1, // Convert 1-based to 0-based for API
+        month: selectedMonth, // Convert 1-based to 0-based for API
         year: selectedYear    // Include selected year
       });
       
       if (response.data) {
-        // Create a NEW object to ensure React detects the change
-        const updatedMonthlyAssets = { ...monthlyAssets };
+        // Update the assets and currentAssets states
+        const updatedAssets = [...assets, response.data];
+        setAssets(updatedAssets);
+        setCurrentAssets(updatedAssets);
         
-        // If there's no array for this month yet, create one
-        const monthKey = getMonthKey(selectedMonth, selectedYear);
-        if (!updatedMonthlyAssets[monthKey]) {
-          updatedMonthlyAssets[monthKey] = [];
+        // Refresh the graph data
+        const updatedChartData = await axios.get(`${API_BASE_URL}/portfolio/performance/${selectedYear}`);
+        if (updatedChartData.data && Array.isArray(updatedChartData.data)) {
+          setChartData({
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            values: updatedChartData.data,
+          });
         }
-        
-        // Add the new asset to the selected month's array
-        updatedMonthlyAssets[monthKey] = [
-          ...updatedMonthlyAssets[monthKey],
-          response.data
-        ];
-        
-        // Update state with the new object
-        setMonthlyAssets(updatedMonthlyAssets);
-        setCurrentAssets([...updatedMonthlyAssets[monthKey]]);
         
         // Clear form fields
         setAssetName('');
         setAssetValue('');
       }
     } catch (error) {
-      console.error('Error adding asset:', error);
+      log('Error adding asset: ' + error, 'error');
     }
   };
 
@@ -223,15 +225,15 @@ function App() {
   // Save edited asset - wrapped in useCallback
   const handleSaveEdit = useCallback(async () => {
     if (!editingAsset || !editValue) return;
-    
+
     try {
       const response = await axios.put(`${API_BASE_URL}/portfolio/${editingAsset.id}`, {
         asset_name: editingAsset.asset_name,
         asset_value: parseFloat(editValue),
-        month: selectedMonth - 1, // Convert 1-based to 0-based for API
+        month: selectedMonth, // Convert 1-based to 0-based for API
         year: selectedYear
       });
-      
+
       if (response.data) {
         // Update assets array with the edited asset
         const updatedAssets = assets.map(asset => 
@@ -239,17 +241,26 @@ function App() {
           { ...asset, asset_value: parseFloat(editValue) } : 
           asset
         );
-        
+
         setAssets(updatedAssets);
-        setCurrentAssets(updatedAssets); // Add this line to update the currentAssets state
-        
+        setCurrentAssets(updatedAssets);
+
+        // Refresh the graph data
+        const updatedChartData = await axios.get(`${API_BASE_URL}/portfolio/performance/${selectedYear}`);
+        if (updatedChartData.data && Array.isArray(updatedChartData.data)) {
+          setChartData({
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            values: updatedChartData.data,
+          });
+        }
+
         // Close modal
         setShowEditModal(false);
         setEditingAsset(null);
         setEditValue('');
       }
     } catch (error) {
-      console.error('Error updating asset:', error);
+      log('Error updating asset: ' + error, 'error');
     }
   }, [editingAsset, editValue, selectedMonth, selectedYear, assets]);
   
@@ -258,20 +269,29 @@ function App() {
     if (!window.confirm('Are you sure you want to delete this asset?')) {
       return;
     }
-    
+
     try {
       const response = await axios.delete(`${API_BASE_URL}/portfolio/${id}`);
-      
+
       if (response.status === 200) {
         // Remove the deleted asset from the assets array
         const updatedAssets = assets.filter(asset => asset.id !== id);
         setAssets(updatedAssets);
-        setCurrentAssets(updatedAssets); // Add this line to update the currentAssets state
+        setCurrentAssets(updatedAssets);
+
+        // Refresh the graph data
+        const updatedChartData = await axios.get(`${API_BASE_URL}/portfolio/performance/${selectedYear}`);
+        if (updatedChartData.data && Array.isArray(updatedChartData.data)) {
+          setChartData({
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            values: updatedChartData.data,
+          });
+        }
       }
     } catch (error) {
-      console.error('Error deleting asset:', error);
+      log('Error deleting asset: ' + error, 'error');
     }
-  }, [assets]);
+  }, [assets, selectedYear]);
 
   // Calculate percentage allocation for each asset
   const assetsWithAllocation = useMemo(() => 
@@ -332,7 +352,7 @@ function App() {
           });
         }
       } catch (error) {
-        console.error('Error fetching chart data:', error);
+        log('Error fetching chart data: ' + error, 'error');
         setChartData({
           labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
           values: [],

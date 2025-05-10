@@ -17,6 +17,9 @@ RUN npm rebuild sqlite3 --build-from-source
 # Copy the rest of the application code
 COPY . .
 
+# Exclude the database file from being copied into the container
+RUN rm -f portfolio.db
+
 EXPOSE 5001
 
 CMD ["node", "server.js"]

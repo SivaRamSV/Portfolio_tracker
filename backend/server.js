@@ -7,6 +7,15 @@ const path = require('path');
 const app = express();
 const PORT = 5001;
 
+// Add a custom logger function
+const log = (message, level = 'info') => {
+  const logLevel = process.env.LOG_LEVEL || 'info';
+  const levels = ['error', 'warn', 'info', 'debug'];
+  if (levels.indexOf(level) <= levels.indexOf(logLevel)) {
+    console[level](message);
+  }
+};
+
 // Middleware
 app.use(bodyParser.json());
 app.use(cors({
@@ -14,16 +23,16 @@ app.use(cors({
 }));
 app.options('*', cors());
 app.use((req, res, next) => {
-  console.log(`Incoming request: ${req.method} ${req.url}`);
+  log(`Incoming request: ${req.method} ${req.url}`, 'info');
   next();
 });
 
 // Initialize SQLite database
 const db = new sqlite3.Database(path.join(__dirname, 'portfolio.db'), (err) => {
   if (err) {
-    console.error('Error opening database:', err.message);
+    log('Error opening database: ' + err.message, 'error');
   } else {
-    console.log('Connected to SQLite database.');
+    log('Connected to SQLite database.', 'info');
     
     // Create v2 table with month and year tracking
     db.run(`CREATE TABLE IF NOT EXISTS portfolio_v2 (
@@ -36,9 +45,9 @@ const db = new sqlite3.Database(path.join(__dirname, 'portfolio.db'), (err) => {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`, (err) => {
       if (err) {
-        console.error('Error creating table:', err.message);
+        log('Error creating table: ' + err.message, 'error');
       } else {
-        console.log('Table portfolio_v2 created or already exists');
+        log('Table portfolio_v2 created or already exists', 'info');
         
         // Check if we need to migrate data from the old table
         db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='portfolio'", (err, table) => {
@@ -46,7 +55,7 @@ const db = new sqlite3.Database(path.join(__dirname, 'portfolio.db'), (err) => {
             // Check if we already migrated the data
             db.get("SELECT COUNT(*) as count FROM portfolio_v2", (err, result) => {
               if (!err && result.count === 0) {
-                console.log("Migrating data from portfolio to portfolio_v2...");
+                log("Migrating data from portfolio to portfolio_v2...", 'info');
                 // Migrate data from old table, extracting month and year from created_at
                 db.all("SELECT * FROM portfolio", [], (err, rows) => {
                   if (!err && rows.length > 0) {
@@ -67,12 +76,12 @@ const db = new sqlite3.Database(path.join(__dirname, 'portfolio.db'), (err) => {
                         year,
                         row.created_at
                       ], (err) => {
-                        if (err) console.error('Error migrating data:', err.message);
+                        if (err) log('Error migrating data: ' + err.message, 'error');
                       });
                     });
                     
                     migrationStmt.finalize();
-                    console.log(`Migrated ${rows.length} assets to the new schema`);
+                    log(`Migrated ${rows.length} assets to the new schema`, 'info');
                   }
                 });
               }
@@ -87,11 +96,11 @@ const db = new sqlite3.Database(path.join(__dirname, 'portfolio.db'), (err) => {
 // Routes
 // Add a new asset with month and year
 app.post('/portfolio', (req, res) => {
-  console.log('Received request body:', req.body);
+  log('Received request body: ' + JSON.stringify(req.body), 'debug');
   const { asset_name, asset_value, month, year } = req.body;
   
   if (!asset_name || !asset_value) {
-    console.error('Validation failed: Missing asset_name or asset_value');
+    log('Validation failed: Missing asset_name or asset_value', 'error');
     return res.status(400).json({ error: 'Asset name and value are required.' });
   }
   
@@ -102,25 +111,28 @@ app.post('/portfolio', (req, res) => {
 
   // Validate month is between 0-11 (Jan-Dec)
   if (assetMonth < 0 || assetMonth > 12) {
-    console.warn(`Invalid month value received: ${assetMonth}, normalizing to valid range`);
+    log(`Invalid month value received: ${assetMonth}, normalizing to valid range`, 'warn');
     // Normalize the month value to be within 0-11
     assetMonth = assetMonth % 12;
     if (assetMonth < 0) assetMonth += 12; // Handle negative values
   }
 
-  const query = `INSERT INTO portfolio_v2 (asset_name, asset_value, month, year) VALUES (?, ?, ?, ?)`;
-  db.run(query, [asset_name, asset_value, assetMonth, assetYear], function (err) {
+  // Modify the insert query to include a default value for updated_at
+  const query = `INSERT INTO portfolio_v2 (asset_name, asset_value, month, year, created_at, updated_at) VALUES (?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP)`;
+  db.run(query, [asset_name, asset_value, assetMonth, assetYear, req.body.created_at], function (err) {
     if (err) {
-      console.error('Error inserting data:', err.message);
+      log('Error inserting data: ' + err.message, 'error');
       return res.status(500).json({ error: 'Failed to add asset.' });
     }
-    console.log('Asset added successfully with ID:', this.lastID);
+    log('Asset added successfully with ID: ' + this.lastID, 'info');
     res.status(201).json({ 
       id: this.lastID, 
       asset_name, 
       asset_value,
       month: assetMonth,
-      year: assetYear
+      year: assetYear,
+      created_at: req.body.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString()
     });
   });
 });
@@ -147,14 +159,14 @@ app.get('/portfolio', (req, res) => {
   
   db.all(query, params, (err, rows) => {
     if (err) {
-      console.error('Error fetching data:', err.message);
+      log('Error fetching data: ' + err.message, 'error');
       return res.status(500).json({ error: 'Failed to fetch portfolio.' });
     }
     
     // Normalize month values to be within 0-11 range
     const normalizedRows = rows.map(row => {
       if (row.month < 0 || row.month > 12) {
-        console.warn(`Normalizing invalid month value in results: ${row.month}`);
+        log(`Normalizing invalid month value in results: ${row.month}`, 'warn');
         const normalizedMonth = row.month % 12;
         return {
           ...row,
@@ -174,13 +186,13 @@ app.get('/portfolio/months', (req, res) => {
   
   db.all(query, [], (err, rows) => {
     if (err) {
-      console.error('Error fetching months:', err.message);
+      log('Error fetching months: ' + err.message, 'error');
       return res.status(500).json({ error: 'Failed to fetch available months.' });
     }
     // Normalize month values to be within 0-11 range
     const normalizedRows = rows.map(row => {
       if (row.month < 0 || row.month > 12) {
-        console.warn(`Normalizing invalid month value in months endpoint: ${row.month}`);
+        log(`Normalizing invalid month value in months endpoint: ${row.month}`, 'warn');
         const normalizedMonth = row.month % 12;
         return {
           ...row,
@@ -199,7 +211,7 @@ app.get('/portfolio/years', (req, res) => {
   
   db.all(query, [], (err, rows) => {
     if (err) {
-      console.error('Error fetching years:', err.message);
+      log('Error fetching years: ' + err.message, 'error');
       return res.status(500).json({ error: 'Failed to fetch available years.' });
     }
     res.status(200).json(rows.map(row => row.year)); // Return just the year values in an array
@@ -224,7 +236,7 @@ app.get('/portfolio/performance/:year', (req, res) => {
   
   db.all(query, [year], (err, rows) => {
     if (err) {
-      console.error('Error fetching performance data:', err.message);
+      log('Error fetching performance data: ' + err.message, 'error');
       return res.status(500).json({ error: 'Failed to fetch performance data.' });
     }
     
@@ -262,7 +274,7 @@ app.put('/portfolio/:id', (req, res) => {
   let validMonth = month;
   if (month !== undefined) {
     if (month < 0 || month > 12) {
-      console.warn(`Invalid month value received in update: ${month}, normalizing to valid range`);
+      log(`Invalid month value received in update: ${month}, normalizing to valid range`, 'warn');
       validMonth = month % 12;
       if (validMonth < 0) validMonth += 12; // Handle negative values
     }
@@ -289,7 +301,7 @@ app.put('/portfolio/:id', (req, res) => {
   
   db.run(query, params, function (err) {
     if (err) {
-      console.error('Error updating asset:', err.message);
+      log('Error updating asset: ' + err.message, 'error');
       return res.status(500).json({ error: 'Failed to update asset.' });
     }
     if (this.changes === 0) {
@@ -313,7 +325,7 @@ app.delete('/portfolio/:id', (req, res) => {
   const query = `DELETE FROM portfolio_v2 WHERE id = ?`;
   db.run(query, [id], function (err) {
     if (err) {
-      console.error('Error deleting asset:', err.message);
+      log('Error deleting asset: ' + err.message, 'error');
       return res.status(500).json({ error: 'Failed to delete asset.' });
     }
     if (this.changes === 0) {
@@ -325,14 +337,14 @@ app.delete('/portfolio/:id', (req, res) => {
 
 // Fix invalid month values in the database
 app.post('/portfolio/fix-months', (req, res) => {
-  console.log('Starting database month value fix...');
+  log('Starting database month value fix...', 'info');
   
   // First, identify records with invalid month values
   const query = `SELECT id, month FROM portfolio_v2 WHERE month < 0 OR month > 11`;
   
   db.all(query, [], (err, rows) => {
     if (err) {
-      console.error('Error identifying invalid month values:', err.message);
+      log('Error identifying invalid month values: ' + err.message, 'error');
       return res.status(500).json({ error: 'Failed to identify invalid month values.' });
     }
     
@@ -340,7 +352,7 @@ app.post('/portfolio/fix-months', (req, res) => {
       return res.status(200).json({ message: 'No invalid month values found.' });
     }
     
-    console.log(`Found ${rows.length} records with invalid month values`);
+    log(`Found ${rows.length} records with invalid month values`, 'info');
     let fixedCount = 0;
     
     // Prepare update statement
@@ -352,12 +364,12 @@ app.post('/portfolio/fix-months', (req, res) => {
       let normalizedMonth = row.month % 12;
       if (normalizedMonth < 0) normalizedMonth += 12;
       
-      console.log(`Fixing record ID ${row.id}: month ${row.month} -> ${normalizedMonth}`);
+      log(`Fixing record ID ${row.id}: month ${row.month} -> ${normalizedMonth}`, 'debug');
       
       // Use run with a promise wrapper for sequential execution
       updateStmt.run([normalizedMonth, row.id], function(err) {
         if (err) {
-          console.error(`Error fixing record ID ${row.id}:`, err.message);
+          log(`Error fixing record ID ${row.id}: ` + err.message, 'error');
         } else if (this.changes > 0) {
           fixedCount++;
         }
@@ -365,7 +377,7 @@ app.post('/portfolio/fix-months', (req, res) => {
     }
     
     updateStmt.finalize(() => {
-      console.log(`Fixed ${fixedCount} records with invalid month values`);
+      log(`Fixed ${fixedCount} records with invalid month values`, 'info');
       res.status(200).json({ 
         message: `Fixed ${fixedCount} records with invalid month values.`,
         found: rows.length,
@@ -377,5 +389,5 @@ app.post('/portfolio/fix-months', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  log(`Server is running on http://localhost:${PORT}`, 'info');
 });

@@ -8,8 +8,6 @@ services:
     container_name: portfolio-tracker-backend
     ports:
       - "5001:5001"
-    volumes:
-      - ./backend/portfolio.db:/app/portfolio.db
     restart: unless-stopped
 
   frontend:
