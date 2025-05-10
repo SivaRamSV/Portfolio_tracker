@@ -100,21 +100,6 @@ A web application for tracking and visualizing your asset portfolio over time.
 4. **Deleting Assets**: Click the delete icon to remove an asset from your portfolio
 5. **Viewing Charts**: Toggle between different chart views to analyze your portfolio
 
-## Database Schema
-
-The application uses SQLite with the following schema:
-
-```sql
-CREATE TABLE portfolio_v2 (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  asset_name TEXT NOT NULL,
-  asset_value REAL NOT NULL,
-  month INTEGER NOT NULL,
-  year INTEGER NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
-```
 
 ## API Endpoints
 
@@ -127,7 +112,13 @@ CREATE TABLE portfolio_v2 (
 
 ## License
 
-This project is proprietary and all rights are reserved. You may not use, copy, modify, or distribute this software without explicit permission from the author.
+This project is open source under the following conditions:
+
+- Free to use, modify, and distribute for non-commercial purposes.
+- Attribution to the original author is required for any modifications or derivative works.
+- Commercial use or significant modifications require explicit approval from the author.
+
+For more details, see the [LICENSE](./LICENSE) file.
 
 ## Contributing
 
